@@ -4,44 +4,42 @@ The solvers require various oracles as inputs, each oracle is a python function 
 For a function f and a linear operator A, the following oracle notations are used:
 
 - function value of f
-
-- a subgradient of f (𝐱↦𝑓'(𝐱)∈∂𝑓⁡(𝐱))
-
-- gradient of f (𝐱↦∇𝑓⁡(𝐱))
-
-- gradient of the conjugate of f (𝐱↦argmax⁡{⟨𝐮,𝐱⟩−𝑓⁡(𝐮)})
-
-- proximal operator of a positive constant times the function ((𝐱,𝛼)↦prox𝛼⁢𝑓⁢(𝐱))
-
-- linear transformation A (𝐱↦A⁢𝐱)
-
-- adjoint of A (𝐱↦A^T⁢𝐱)
+- a subgradient of f (x ↦ f'(x) ∈ ∂f(x))
+- gradient of f (x ↦ ∇f(x))
+- gradient of the conjugate of f (x ↦ argmax_u {⟨u, x⟩ − f(u)})
+- proximal operator of a positive constant times the function ((x, α) ↦ prox_{α f}(x))
+- linear transformation A (x ↦ A x)
+- adjoint of A (x ↦ A^T x)
 
 All the involved functions are convex.
 """
 
 class ProblemBase:
-    """Base class for defining optimization problems.
+	"""Base class for defining optimization problems.
     """
-	
-	def f(self, x):
-        """Return the function value f(x)
-		"""
+
+    def f(self, x):
+        """
+        Return the function value f(x)
+        """
         raise NotImplementedError
 
     def subgrad(self, x):
-        """Return a subgradient f'(x) ∈ ∂f(x)
-		"""
+        """
+        Return a subgradient f'(x) ∈ ∂f(x)
+        """
         raise NotImplementedError
 
     def grad(self, x):
-        """Return the gradient ∇f(x) of f at x. f is smooth.
-		"""
+        """
+        Return the gradient ∇f(x) of f at x. f is smooth.
+        """
         raise NotImplementedError
 
     def grad_conjugate(self, x):
-        """Return gradient of the conjugate function ∇f^*(x)
-		"""
+        """
+        Return gradient of the conjugate function ∇f*(x)
+        """
         raise NotImplementedError
 
     def prox_f(self, x, alpha):
@@ -52,12 +50,13 @@ class ProblemBase:
         raise NotImplementedError
 
     def A(self, x):
-        """Return the linear transformation A(x)
-		"""
+        """
+        Return the linear transformation A(x)
+        """
         raise NotImplementedError
 
     def AT(self, y):
-        """Return the adjoint linear transformation A^T(y)
-		"""
+        """
+        Return the adjoint linear transformation A^T(y)
+        """
         raise NotImplementedError
-

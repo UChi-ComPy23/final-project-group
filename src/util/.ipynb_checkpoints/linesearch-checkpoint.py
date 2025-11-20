@@ -12,6 +12,14 @@ def backtracking(x, p, g, f, alpha0=1.0, rho=0.5, c_ls=1e-4):
     rho: contraction factor (0<rho<1).
     c_ls: Armijo constant.
 	"""
+	alpha = alpha0
+    fx = f(x)
+    while f(x + alpha * p) > fx + c_ls * alpha * (g @ p): # Armijo not satisfied
+        alpha *= rho
+        if alpha < 1e-16:
+            raise RuntimeError("btls failed")
+
+    return alpha
 
 # backtracking for 348 Applied Optimization for reference
 # def backtracking(x, p, g, alpha0=1.0, rho=0.5, c_ls=1e-4):

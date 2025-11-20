@@ -22,7 +22,7 @@ def prox_Euclidean_norm(x, alpha):
 def prox_l1(x, alpha):
     """Prox of α‖x‖₁, 𝑙1−norm
 	"""
-    raise NotImplementedError
+    return np.sign(x) * np.maximum(np.abs(x) - alpha, 0)
 
 def prox_linf(x, alpha):
     """Prox of α‖x‖_∞, 𝑙∞−norm

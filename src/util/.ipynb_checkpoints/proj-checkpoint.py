@@ -15,7 +15,7 @@ def proj_Euclidean_ball(x, c, r):
 def proj_box(x, l, u):
     """Projection onto a coordinate-wise box Box⁡[𝐥,𝐮]={𝐱:𝐥≤𝐱≤𝐮}
     """
-    raise NotImplementedError
+    return np.minimum(np.maximum(x, l), u)
 
 def proj_affine_set(x, A, b):
     """Projection onto an affine set {𝐱:𝐀𝐱=𝐛}. A full row rank.

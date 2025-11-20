@@ -14,7 +14,7 @@ Each solver implements its own iteration rule in step().
 
 class SolverBase:
     """Base class for optimization solvers.
-	"""
+    """
 
     def __init__(self, problem, x0):
         """
@@ -39,7 +39,7 @@ class SolverBase:
 
     def stop(self):
         """
-		Stopping Condition.
+        Stopping Condition.
         Check for convergence.
         Default returns False (run until max_iter).
         Subclasses may override with different stopping condition.
@@ -49,16 +49,16 @@ class SolverBase:
     def record(self, **kwargs):
         """
         Record diagnostic quantities.
-		e.g. self.record(obj=f, step_size=alpha, residual=r)
-        Automatically stores lists under history for futhur usage.
+        e.g. self.record(obj=f, step_size=alpha, residual=r)
+        Automatically stores lists under history for future usage.
         """
         for key, value in kwargs.items():
             self.history.setdefault(key, []).append(value)
-			
+
     def run(self, max_iter=1000):
         """
         Run the solver for up to max_iter iterations or until stop() is True.
-	    Return the final iterate.
+        Return the final iterate.
         """
         for _ in range(max_iter):
             self.step()

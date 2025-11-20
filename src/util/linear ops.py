@@ -9,20 +9,20 @@ class LinearOperator:
     """linear operator with forward map A(x) and adjoint A^T(y)
 	"""
 
-    def __init__(self, forward, adjoint, shape=None):
+    def __init__(self, A, AT=None):
         """
-        forward: callable implementing A(x)
-        adjoint: callable implementing A^T(y)
-        shape: optional (m, n)
+        A: matrix or callable
+        AT: adjoint (optional when A is callable)
         """
-        self.forward = forward
-        self.adjoint = adjoint
-        self.shape = shape
+        self.A = A
+        self.AT_op = AT
 
-    def A(self, x):
-        """Compute A(x)."""
-        return self.forward(x)
+    def __call__(self, x):
+        if callable(self.A):
+            return self.A(x)
+        return self.A @ x
 
-    def AT(self, y):
-        """Compute A^T(y)."""
-        return self.adjoint(y)
+    def T(self, y):
+        if self.AT_op is not None:
+            return self.AT_op(y)
+        return self.A.T @ y
