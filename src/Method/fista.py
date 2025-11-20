@@ -32,3 +32,16 @@ class FISTA(SolverBase):
         """Perform one FISTA iteration
 		"""
         raise NotImplementedError
+#FISTA
+def fista(f, grad_f, prox_g, x0, L, max_iter=500):
+    x = x0.copy()
+    y = x.copy()
+    t = 1.0
+    objs = []
+    for k in range(max_iter):
+        x_new = prox_g(y - (1.0/L)*grad_f(y), 1.0/L)
+        t_new = (1 + np.sqrt(1 + 4*t*t)) / 2.0
+        y = x_new + (t-1)/t_new * (x_new - x)
+        x, t = x_new, t_new
+        objs.append(f(x))
+    return x, np.array(objs)
