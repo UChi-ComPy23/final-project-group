@@ -1,53 +1,37 @@
-from Core.solver import SolverBase
-from Core.util.linesearch import backtracking
-
-"""
-Method: proximal gradient
-
-Minimization model: minimize   f(x) + λ g(x)
-
-Assumptions:
-- f is smooth with Lipschitz gradient
-- g is proper, closed, and proximable
-- λ > 0
-
-Oracles:
-- f(x)
-- ∇f(x): gradient of f
-- g(x)
-- prox_{αg}(x): proximal operator of g
-"""
+from src.core.solver import SolverBase
+from src.util.linesearch import backtracking
+import numpy as np
 
 class ProxGradient(SolverBase):
-    """Proximal gradient method
-	"""
-    def __init__(self, problem, x0, alpha=None, btls=True):
+    """Proximal Gradient (PG) method: x_{k+1} = prox_{αg}(x - α ∇f(x))"""
+
+    def __init__(self, problem, x0, alpha=None):
         """
-        problem: ProblemBase providing desired oracles
-        x0: initial point.
-        alpha(step size): if None, use backtracking.
-        btls:bool, whether to use backtracking line search.
+        problem: ProblemBase object providing f, grad, prox_g
+        x0: initial point
+        alpha: step size (if None → backtracking)
         """
         super().__init__(problem, x0)
-        self.alpha = alpha
-        self.btls = btls
+        self.alpha = alpha  # fixed step or None (backtracking)
 
     def step(self):
-        g = self.problem.grad(self.x)
-        p = -g  #gradient descent direction
+        """Perform one standard proximal gradient step."""
+        g = self.problem.grad(self.x)          # ∇f(x)
+        p = -g                                # descent direction
 
-        if self.alpha is None:# use btls find step size
-            f = self.problem.f 
+        # Determine step size
+        if self.alpha is None:
+            f = self.problem.f
             alpha = backtracking(f, self.x, p, g)
         else:
             alpha = self.alpha
 
-        # forward-backward update
+        # Forward-backward update
         x_new = self.x - alpha * g
         if hasattr(self.problem, "prox_g"):
             self.x = self.problem.prox_g(x_new, alpha)
         else:
-            raise RuntimeError("missing prox_g ")
+            raise RuntimeError("Problem missing prox_g")
 
-        self.record(obj=self.problem.f(self.x)) #record
-		
+        # Record objective value
+        self.record(obj=self.problem.f(self.x))
