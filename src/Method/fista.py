@@ -1,47 +1,49 @@
 from core.solver import SolverBase
-
-"""
-Method: FISTA
-Minimization model: minimize f(x) + λ g(x)
-
-Assumptions:
--f is smooth
--g is proper, closed, and proximable
--λ > 0
-
-Oracles:
-- f(x), ∇f(x)
-- g(x), prox_{αg}(x)
-"""
+from core.util.linesearch import backtracking
+import numpy as np
 
 class FISTA(SolverBase):
-    """FISTA method
-	"""
+    """FISTA method: accelerate proximal gradient
+    """
     def __init__(self, problem, x0, alpha=None, monotone=False):
-        """
-        problem: ProblemBase providing desired oracles
-        x0: initial point
-        alpha(step size): if None, use backtracking.
-        monotone:bool, whether to enforce monotone variant of FISTA.
-        """
         super().__init__(problem, x0)
         self.alpha = alpha
         self.monotone = monotone
 
+        # FISTA-specific variables
+        self.y = x0.copy()
+        self.t = 1.0
+        self.obj_prev = self.problem.f(self.x)
+
     def step(self):
-        """Perform one FISTA iteration
-		"""
-        raise NotImplementedError
-#FISTA
-def fista(f, grad_f, prox_g, x0, L, max_iter=500):
-    x = x0.copy()
-    y = x.copy()
-    t = 1.0
-    objs = []
-    for k in range(max_iter):
-        x_new = prox_g(y - (1.0/L)*grad_f(y), 1.0/L)
-        t_new = (1 + np.sqrt(1 + 4*t*t)) / 2.0
-        y = x_new + (t-1)/t_new * (x_new - x)
-        x, t = x_new, t_new
-        objs.append(f(x))
-    return x, np.array(objs)
+        g = self.problem.grad(self.y)
+        p = -g
+
+        # Step size: fixed or backtracking
+        if self.alpha is None:
+            f = self.problem.f
+            alpha = backtracking(f, self.y, p, g)
+        else:
+            alpha = self.alpha
+
+        # FISTA forward-backward update
+        x_new = self.y - alpha * g
+        x_new = self.problem.prox_g(x_new, alpha)
+
+        # Monotone variant (optional)
+        f_new = self.problem.f(x_new)
+        if self.monotone and f_new > self.obj_prev:
+            # restart to keep objective decreasing
+            x_new = self.x.copy()
+            self.y = x_new.copy()
+            self.t = 1.0
+        else:
+            # Standard FISTA momentum update
+            t_new = (1 + np.sqrt(1 + 4*self.t*self.t)) / 2.0
+            self.y = x_new + (self.t - 1)/t_new * (x_new - self.x)
+            self.t = t_new
+
+        # Update iterate and objective
+        self.x = x_new
+        self.obj_prev = f_new
+        self.record(obj=f_new)
