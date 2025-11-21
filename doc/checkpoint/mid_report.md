@@ -70,6 +70,12 @@ We have constructed a comprehensive Lasso sparse regression testing framework to
 
 PG employs the classical forward-backward splitting mechanism, achieving optimization through alternating gradient steps and proximal operator applications. FISTA introduces Nesterov momentum acceleration on top of PG, constructing extrapolation points using historical gradient information. S-FISTA further incorporates an intelligent restart mechanism based on gradient conditions, specifically designed to handle complex optimization problems with multiple composite terms. The testing framework includes complete convergence trajectory recording, computation time statistics, and visualization tools, ensuring the comprehensiveness and reliability of the comparative experiments.
 
+Here is the result of the test:
+
+![PG vs FISTA Convergence Curve Comparison](/Users/skylar/CAAM3750/final-project-group/Figure_1.png)
+
+The convergence curve comparison chart clearly demonstrates the performance differences between the Proximal Gradient (PG) method and the FISTA accelerated method on the Lasso problem. From the chart, it can be observed that FISTA (red line) exhibits significant convergence acceleration, rapidly reducing the gap between the objective function value and the optimal value to approximately 10^-5 within the first 100 iterations, reflecting its theoretical O(1/k²) superlinear convergence characteristic. In contrast, PG (blue line) shows a typical linear convergence pattern, with a smoother and more stable convergence trajectory. Notably, FISTA exhibits slight oscillations during the convergence process, which is a typical phenomenon of the Nesterov momentum method, while PG maintains a perfect monotonic descent characteristic. After 800 iterations, both methods achieve high precision above 10^-13, with FISTA attaining a better final convergence accuracy. This comparison not only validates the correctness of both algorithm implementations but also provides clear guidance for algorithm selection in practical applications: FISTA should be chosen when pursuing convergence speed, while PG is more suitable for scenarios requiring absolute stability.
+
 # 5. Preliminary investigations on Method Effectiveness
 
 Based on systematic testing and analysis, we have drawn the following preliminary conclusions regarding the effectiveness of the three optimization methods:
