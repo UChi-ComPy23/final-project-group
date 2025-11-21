@@ -72,7 +72,7 @@ PG employs the classical forward-backward splitting mechanism, achieving optimiz
 
 Here is the result of the test:
 
-![PG vs FISTA Convergence Curve Comparison](./Figure_1.png)
+![PG vs FISTA Convergence Curve Comparison](../../Figur_1.png)
 
 The convergence curve comparison chart clearly demonstrates the performance differences between the Proximal Gradient (PG) method and the FISTA accelerated method on the Lasso problem. From the chart, it can be observed that FISTA (red line) exhibits significant convergence acceleration, rapidly reducing the gap between the objective function value and the optimal value to approximately 10^-5 within the first 100 iterations, reflecting its theoretical O(1/k²) superlinear convergence characteristic. In contrast, PG (blue line) shows a typical linear convergence pattern, with a smoother and more stable convergence trajectory. Notably, FISTA exhibits slight oscillations during the convergence process, which is a typical phenomenon of the Nesterov momentum method, while PG maintains a perfect monotonic descent characteristic. After 800 iterations, both methods achieve high precision above 10^-13, with FISTA attaining a better final convergence accuracy. This comparison not only validates the correctness of both algorithm implementations but also provides clear guidance for algorithm selection in practical applications: FISTA should be chosen when pursuing convergence speed, while PG is more suitable for scenarios requiring absolute stability.
 
