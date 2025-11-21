@@ -64,6 +64,37 @@ Since the computation involved in first-order methods is relatively simple, our 
 
 The `src` directory has four main subpackages: `core`, `methods`, `utils`, and `problems`. The `core` folder contains the base classes for the problem definition and the solver, including the oracle interface and the main run loop. The `methods` folder includes all the first-order algorithms described in Section 2, each implemented as a subclass of the solver base class with its own update rule. The `utils` folder provides helper functions such as proximal operators, projections, backtracking line search, and linear operator wrappers for both dense and sparse matrices, along with the original `tools.py` file for plotting and other small utilities. The `problems` folder contains concrete optimization problems, such as quadratic, LASSO, logistic regression, and constrained models, each inheriting from the base oracle and supplying the specific function values, gradients, proximal operators, and linear mappings required by the solvers.
 
+# 4. Description of Test
+
+We have constructed a comprehensive Lasso sparse regression testing framework to systematically compare the performance of three optimization algorithms: the Proximal Gradient (PG) method, the FISTA accelerated method, and the Smoothed FISTA (S-FISTA). The tests are based on a $200 \times 1000$-dimensional sparse signal recovery problem, using a unified experimental setup: a fixed regularization parameter $\lambda = 0.1$, 800 iterations, and a step size set to the theoretically optimal value of $1/L$.
+
+PG employs the classical forward-backward splitting mechanism, achieving optimization through alternating gradient steps and proximal operator applications. FISTA introduces Nesterov momentum acceleration on top of PG, constructing extrapolation points using historical gradient information. S-FISTA further incorporates an intelligent restart mechanism based on gradient conditions, specifically designed to handle complex optimization problems with multiple composite terms. The testing framework includes complete convergence trajectory recording, computation time statistics, and visualization tools, ensuring the comprehensiveness and reliability of the comparative experiments.
+
+# 5. Preliminary investigations on Method Effectiveness
+
+Based on systematic testing and analysis, we have drawn the following preliminary conclusions regarding the effectiveness of the three optimization methods:
+
+First, all algorithms demonstrate good convergence on the Lasso problem, effectively recovering sparse signal patterns, which validates the mathematical correctness of the algorithm implementations. Specifically, PG exhibits the expected stable and monotonic convergence characteristics, with a convergence rate consistent with the theoretical $O(1/k)$ bound. FISTA indeed achieves accelerated convergence, with a significantly faster decline in the objective function during the early iterations compared to PG, approaching the theoretical $O(1/k^2)$ convergence rate, albeit with minor oscillations. S-FISTA's restart mechanism effectively prevents divergence, showing better numerical stability in complex problems.
+
+In terms of computational efficiency, the three methods have similar per-iteration times, but significant differences in convergence speed, reflecting the classic trade-off between *computational efficiency* and *numerical stability*. These results fully demonstrate the effectiveness of our algorithm implementations and provide a reliable benchmark for subsequent research.
+
+# 6. Project Improvement Recommendations
+
+Based on the preliminary test findings, we propose the following improvements for the final project:
+
+- **Expand Problem Diversity**: In addition to Lasso, include typical problems such as logistic regression and matrix completion to comprehensively evaluate the generalization capability of the algorithms.
+
+- **Enhance Algorithm Robustness**: Implement an adaptive restart strategy in FISTA to dynamically adjust the momentum term based on gradient conditions, balancing convergence speed and stability.
+
+- **Optimize Code Architecture**: Abstract common computational modules (line search, convergence judgment) into independent utility functions to reduce code redundancy and improve maintainability.
+  
+- **Improve Documentation**: Add detailed docstrings and usage examples, and establish an automated testing pipeline to ensure code quality and long-term maintainability.
+
+- **Enable Large-Scale Computing**: Implement distributed computing support to handle very large-scale optimization problems, enhancing the practical value of the project.
+
+These improvements will significantly enhance the robustness, usability, and scalability of our convex optimization toolbox.
+
+
 # References
 
 Beck, A., & Guttmann-Beck, N. (2018). FOM – a MATLAB toolbox of first-order methods for solving convex optimization problems. Optimization Methods and Software, 34(1), 172–193. https://doi.org/10.1080/10556788.2018.1437159  
