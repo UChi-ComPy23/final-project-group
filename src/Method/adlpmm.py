@@ -16,7 +16,7 @@ Oracles:
 """
 
 class ADLPMM(SolverBase):
-    """ADLPMM method
+    """ADLPMM method, requires problems to implement prox_f and A, AT.
 	"""
     def __init__(self, problem, x0, z0, u0, rho=1.0, abstol=1e-4, reltol=1e-2):
         """

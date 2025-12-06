@@ -16,14 +16,15 @@ class ProxGradient(SolverBase):
         self.alpha = alpha
         self.btls = btls
         self.max_iter = max_iter
-        # Initialize objective history list - THIS IS CRITICAL
-        self.objs = []
+        self.objs = [] #initialize objective history list 
 
     def step(self):
+        """a step for prox_gradient method
+        """
         g = self.problem.grad(self.x)
         p = -g  #gradient descent direction
 
-        if self.alpha is None:# use btls find step size
+        if self.alpha is None: # use btls find step size
             f = self.problem.f 
             alpha = backtracking(f, self.x, p, g)
         else:
@@ -38,9 +39,9 @@ class ProxGradient(SolverBase):
         if hasattr(self.problem, "prox_g"):
             self.x = self.problem.prox_g(x_new, alpha)
         else:
-                         Error("missing prox_g ")
+            raise RuntimeError("missing prox_g ")
 
-        # Record objective value - THIS IS CRITICAL
+        # Record objective value
         current_obj = self.problem.f(self.x)
         self.objs.append(current_obj)
         if hasattr(self, 'record'):

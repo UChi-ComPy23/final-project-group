@@ -1,37 +1,48 @@
-from src.core.solver import SolverBase
-from src.util.linesearch import backtracking
 import numpy as np
+from src.Core.solver import SolverBase
+from src.util.linesearch import backtracking
 
 class ProxGradient(SolverBase):
-    """Proximal Gradient (PG) method: x_{k+1} = prox_{αg}(x - α ∇f(x))"""
-
-    def __init__(self, problem, x0, alpha=None):
+    """Proximal gradient method"""
+    def __init__(self, problem, x0, alpha=None, btls=True, max_iter=1000):
         """
-        problem: ProblemBase object providing f, grad, prox_g
-        x0: initial point
-        alpha: step size (if None → backtracking)
+        problem: ProblemBase providing desired oracles
+        x0: initial point.
+        alpha(step size): if None, use backtracking.
+        btls:bool, whether to use backtracking line search.
+        max_iter: maximum number of iterations
         """
         super().__init__(problem, x0)
-        self.alpha = alpha  # fixed step or None (backtracking)
+        self.alpha = alpha
+        self.btls = btls
+        self.max_iter = max_iter
+        self.objs = [] #initialize objective history list 
 
     def step(self):
-        """Perform one standard proximal gradient step."""
-        g = self.problem.grad(self.x)          # ∇f(x)
-        p = -g                                # descent direction
+        """a step for prox_gradient method
+        """
+        g = self.problem.grad(self.x)
+        p = -g  #gradient descent direction
 
-        # Determine step size
-        if self.alpha is None:
-            f = self.problem.f
+        if self.alpha is None: # use btls find step size
+            f = self.problem.f 
             alpha = backtracking(f, self.x, p, g)
         else:
             alpha = self.alpha
 
-        # Forward-backward update
+        # Add safeguard for step size to prevent overflow
+        if alpha > 1e10:  # If step size is too large, cap it
+            alpha = 1.0
+
+        # forward-backward update
         x_new = self.x - alpha * g
         if hasattr(self.problem, "prox_g"):
             self.x = self.problem.prox_g(x_new, alpha)
         else:
-            raise RuntimeError("Problem missing prox_g")
+            raise RuntimeError("missing prox_g ")
 
         # Record objective value
-        self.record(obj=self.problem.f(self.x))
+        current_obj = self.problem.f(self.x)
+        self.objs.append(current_obj)
+        if hasattr(self, 'record'):
+            self.record(obj=current_obj)
