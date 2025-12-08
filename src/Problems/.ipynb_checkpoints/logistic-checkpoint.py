@@ -38,7 +38,7 @@ class LogisticProblem(ProblemBase):
         """
         z = self.A @ x
         s = 1 / (1 + np.exp(self.y * z)) # sigmoid(-y z)
-        grad_loss = -(self.y * s) @ self.A
+        grad_loss = -(self.A.T @ (self.y * s))
         grad_reg = self.lam * x
         return grad_loss + grad_reg
 

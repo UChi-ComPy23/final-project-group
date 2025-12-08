@@ -1,6 +1,23 @@
 import numpy as np
 from src.Core.solver import SolverBase
-from src.util.linesearch import backtracking
+from src.util.linesearch import backtracking, backtracking_composite
+from src.Core.problems import ProblemBase
+
+"""
+Method: Proximal Gradient (Forward–Backward Splitting)
+Minimization model: minimize f(x) + g(x)
+
+Assumptions:
+- f is smooth with Lipschitz-continuous gradient
+- g is proper, closed, and proximable
+- prox_g must be available through the problem interface
+
+The method performs:
+1) Forward (gradient) step on f: x̃ = x - α ∇f(x)
+2) Backward (proximal) step on g: x⁺ = prox_{α g}(x̃)
+
+Step size α may be fixed or selected by backtracking line search.
+"""
 
 class ProxGradient(SolverBase):
     """Proximal gradient method"""
@@ -26,7 +43,7 @@ class ProxGradient(SolverBase):
 
         if self.alpha is None: # use btls find step size
             f = self.problem.f 
-            alpha = backtracking(f, self.x, p, g)
+            alpha = backtracking_composite(f=self.problem.f, grad_f=self.problem.grad,g_fun=self.problem.g,prox_g=self.problem.prox_g,x=self.x)
         else:
             alpha = self.alpha
 
