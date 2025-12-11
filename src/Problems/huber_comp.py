@@ -11,8 +11,7 @@ phi customizable
 class HuberCompositeProblem(ProblemBase):
     """
     Composite model
-    This model is appropriate for NestedFISTA, which requires
-    a nested structure phi(f(x)) and a nonsmooth term g(Ax).
+    This model requires a nested structure phi(f(x)) and a nonsmooth term g(Ax).
     """
 
     def __init__(self, A, b, delta_f, lam=0.1, phi_mode="sqrt"):

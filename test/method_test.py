@@ -15,7 +15,6 @@ from src.Method.prox_subgradient import ProxSubgradient
 from src.Method.sfista import SmoothedFISTA
 from src.Method.comd import CoMirrorDescent
 from src.Method.adlpmm import ADLPMM
-from src.Method.nested_fista import NestedFISTA, accurate_inner_solver
 from src.Method.fdpg import FDPG
 
 from src.util.proj import proj_box
@@ -119,44 +118,6 @@ def test_smoothed_fista_correctness_quadratic_dual():
 
     # Smoothed FISTA should converge very close to 0
     assert np.allclose(x_final, x_star, atol=1e-2)
-
-
-def test_nested_fista_correctness_huber():
-    """
-    NestedFISTA should reliably decrease the composite objective on a small
-    nonlinear-composite Huber + L1 problem: F(x) = phi(f(x)) + lam * g(Ax)
-    Because the inner solver is inexact (ADMM), we compare only against a 
-    high-accuracy ProxGradient baseline in *objective value*, not iterates.
-    """
-    np.random.seed(0)
-
-    # small synthetic problem
-    m, n = 10, 5
-    A = np.random.randn(m, n)
-    b = np.random.randn(m)
-    delta = 0.1
-    lam = 0.1
-
-    # composite problem (must match your class name exactly)
-    problem = HuberCompositeProblem(A=A,b=b,delta_f=delta,lam=lam, phi_mode="sqrt")
-
-    x0 = np.zeros(n)
-    nf = NestedFISTA(problem, x0, lam, accurate_inner_solver)
-    for _ in range(300):
-        nf.step()
-
-    x_nf = nf.x
-    pg = ProxGradient(problem, np.zeros(n), alpha=1e-3)
-    for _ in range(5000):
-        pg.step()
-    x_star = pg.x
-
-    # final objective (must use problem.phi + problem.f + lam*g(Ax))
-    def F(x):
-        return problem.phi(problem.f(x)) + lam * problem.g(problem.A(x))
-		
-    assert abs(F(x_nf) - F(x_star)) < 5e-2
-    assert np.linalg.norm(x_nf - x_star) < 5e-1
 
 
 def test_fdpg_correctness_quadratic():
