@@ -63,8 +63,7 @@ class NestedFISTA(SolverBase):
         y_new = (
             x_new
             + (self.t / t_new) * (z_k - x_new)
-            + (self.t_prev / t_new) * (x_new - self.x)
-        )
+            + (self.t_prev / t_new) * (x_new - self.x))
 
         # update state
         self.x_prev = self.x
@@ -75,31 +74,81 @@ class NestedFISTA(SolverBase):
 
         self.record(obj=F(self.x))
 		
-def accurate_inner_solver(problem, y, lam, M, n_inner=20):
+def accurate_inner_solver(problem, y, lam, M, n_inner=20, rho=None):
     """
-    More accurate inner solver for NestedFISTA.
+    ADMM-based inner solver for NestedFISTA.
 
-    NestedFISTA must approximately solve
-        prox_{(λ/M) g ∘ A}(y)
-    which rarely has a closed form.
+    Approximate: prox_{(λ/M) g ∘ A}(y)= argmin_x (M/2) ||x - y||^2 + λ g(Ax).
 
-    We solve instead the surrogate:
-        min_x  (M/2)||x - y||² + λ g(Ax)
-
-    whose smooth part has gradient M(x - y).
+    We solve
+        min_{x,z} (M/2)||x - y||^2 + λ g(z)
+        s.t.      z = A x
+    with ADMM on (x,z,u).
     """
+    # penalty parameter
+    if rho is None:
+        rho = M  # simple M
 
-    z = y.copy()
+    # try to get explicit A; otherwise fall back to matvecs
+    if hasattr(problem, "Amat"):
+        A_mat = problem.Amat
+        m, n = A_mat.shape
+        AtA = A_mat.T @ A_mat
+        K = M * np.eye(n) + rho * AtA
+        # pre-factorize K once per inner solve
+        L = np.linalg.cholesky(K)
+        def solve_K(rhs):
+            # solve K x = rhs via Cholesky
+            w = np.linalg.solve(L, rhs)
+            return np.linalg.solve(L.T, w)
+        A = lambda x: A_mat @ x
+        AT = lambda v: A_mat.T @ v
+    else:
+        # generic matvec-only version (slower; uses AT(Ax))
+        # assume x has same shape as y
+        n = y.shape[0]
+        def A(x):
+            return problem.A(x)
+        def AT(v):
+            return problem.AT(v)
+        def K_mv(x):
+            return M * x + rho * AT(A(x))
+        def solve_K(rhs, iters=50, tol=1e-8):
+            # simple CG for SPD system K x = rhs
+            x = np.zeros_like(rhs)
+            r = rhs - K_mv(x)
+            p = r.copy()
+            rs_old = np.dot(r, r)
+            for _ in range(iters):
+                Ap = K_mv(p)
+                alpha = rs_old / np.dot(p, Ap)
+                x = x + alpha * p
+                r = r - alpha * Ap
+                rs_new = np.dot(r, r)
+                if np.sqrt(rs_new) < tol:
+                    break
+                p = r + (rs_new / rs_old) * p
+                rs_old = rs_new
+            return x
 
-    step = 1.0 / M
+    # initialize ADMM variables
+    x = y.copy()
+    z = A(x)
+    u = np.zeros_like(z)
 
+    # ADMM iterations
     for _ in range(n_inner):
-        # gradient of (M/2)||x - y||²
-        grad_smooth = M * (z - y)
+        # x-update: solve (M I + ρ AᵀA)x = M y + ρ Aᵀ(z - u)
+        rhs = M * y + rho * AT(z - u)
+        x = solve_K(rhs)
 
-        # forward-backward step
-        z_tilde = z - step * grad_smooth
-        z = problem.prox_g(z_tilde, step * lam)
+        # z-update: prox on g
+        v = A(x) + u
+        # here τ = λ / ρ → prox_{(λ/ρ) g}
+        z = problem.prox_g(v, lam / rho)
 
-    return z
+        # dual update
+        u = u + A(x) - z
+
+    return x
 

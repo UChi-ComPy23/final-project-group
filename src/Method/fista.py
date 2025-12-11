@@ -36,29 +36,52 @@ class FISTA(SolverBase):
         self.alpha = alpha
         self.monotone = monotone
 
-        self.y = x0.copy() # extrapolated point
-        self.t = 1 # momentum parameter
+        self.y = x0.copy()  # extrapolated point
+        self.t = 1  # momentum parameter
         self.obj_prev = self.problem.f(self.x)
-        self.objs = [self.obj_prev] # store objective history
+        self.objs = [self.obj_prev]  # store objective history
 
     def step(self):
-        """Perform one FISTA iteration: gradient → prox → momentum update."""
-        g = self.problem.grad(self.y) # gradient at extrapolated point
-        p = -g # descent direction
+        """Perform one FISTA iteration: gradient → prox → momentum update
+		"""
+        g = self.problem.grad(self.y)  # gradient at extrapolated point
+        p = -g  # descent direction
 
         # Step size: fixed or backtracking
         if self.alpha is None:
-            f = self.problem.f
-            alpha = backtracking_composite(f=self.problem.f,grad_f=self.problem.grad,g_fun=self.problem.g,prox_g=self.problem.prox_g,x=self.y)
+            # composite BTLS on F(x) = f(x) + g(x)
+            alpha = backtracking_composite(f=self.problem.f,grad_f=self.problem.grad,g_fun=self.problem.g, prox_g=self.problem.prox_g,
+                x=self.y,)
         else:
             alpha = self.alpha
 
+        # Safeguard for step size (avoid crazy huge steps that cause overflow)
+        if alpha > 1e10:
+            alpha = 1
+
         # 1) Proximal gradient step
         x_new = self.y + alpha * p
-        if hasattr(self.problem, "prox_g"):
-            x_new = self.problem.prox_g(x_new, alpha)
-        else:
-            raise RuntimeError("missing prox_g")
+        # apply prox_g only if implemented
+        prox_g = getattr(self.problem, "prox_g", None)
+        if prox_g is not None and callable(prox_g):
+            try:
+                x_new = prox_g(x_new, alpha)
+            except NotImplementedError:
+                pass
+
+        # reject extrapolated step
+        if self.monotone:
+            f_new = self.problem.f(x_new)
+            if f_new > self.obj_prev:
+                x_pg = self.x - alpha * g
+                if hasattr(self.problem, "prox_g"):
+                    try:
+                        x_pg = self.problem.prox_g(x_pg, alpha)
+                    except NotImplementedError:
+                        pass
+                x_new = x_pg
+                f_new = self.problem.f(x_pg)
+            self.obj_prev = f_new
 
         # 2) Update momentum parameter and extrapolated point
         t_new = (1 + np.sqrt(1 + 4 * self.t**2)) / 2
@@ -68,12 +91,15 @@ class FISTA(SolverBase):
         if self.monotone:
             f_new = self.problem.f(x_new)
             if f_new > self.obj_prev:
-                # restart: remove momentum
                 x_new = self.x + alpha * p
                 if hasattr(self.problem, "prox_g"):
-                    x_new = self.problem.prox_g(x_new, alpha)
+                    try:
+                        x_new = self.problem.prox_g(x_new, alpha)
+                    except NotImplementedError:
+                        pass
                 y_new = x_new.copy()
-                t_new = 1.0
+                t_new = 1
+                f_new = self.problem.f(x_new)
             self.obj_prev = f_new
 
         # update

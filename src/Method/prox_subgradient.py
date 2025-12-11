@@ -30,8 +30,6 @@ class ProxSubgradient(SolverBase):
 
     def __init__(self, problem, x0, step_rule=None):
         """
-        Parameters
-        ----------
         problem: f, (subgrad or grad), prox_g.
         x0: Initial point.
         step_rule: Function k ↦ α_k specifying the step size.
@@ -50,9 +48,7 @@ class ProxSubgradient(SolverBase):
         if type(self.problem).grad is not ProblemBase.grad:
             return self.problem.grad(x)
 
-        raise RuntimeError(
-            "ProxSubgradient needs either subgrad(x) or grad(x) "
-            "implemented in the Problem class.")
+        raise RuntimeError("ProxSubgradient needs either subgrad(x) or grad(x) ")
 
     def step(self):
         """Perform one proximal subgradient update
@@ -72,10 +68,14 @@ class ProxSubgradient(SolverBase):
         x_tilde = self.x - alpha * s
 
         # 4) backward/prox step on g 
-        if hasattr(self.problem, "prox_g"):
-            x_new = self.problem.prox_g(x_tilde, alpha)
+        prox_g = getattr(self.problem, "prox_g", None)
+        if prox_g is not None and callable(prox_g):
+            try:
+                x_new = prox_g(x_tilde, alpha)
+            except NotImplementedError:
+                x_new = x_tilde
         else:
-            x_new = x_tilde  # pure subgradient method
+            x_new = x_tilde
 
         # update iterate
         self.x = x_new
@@ -90,8 +90,4 @@ class ProxSubgradient(SolverBase):
 
         grad_norm = float(np.linalg.norm(s))
 
-        self.record(
-            obj=obj,
-            x=self.x.copy(),
-            step_size=alpha,
-            grad_norm=grad_norm,)
+        self.record(obj=obj, x=self.x.copy(), step_size=alpha, grad_norm=grad_norm,)

@@ -18,6 +18,8 @@ class TotalVariationProblem(ProblemBase):
         self.b = b
         self.lam = lam
         self.n = len(b)
+        self.mu = 1 # f(x) = 1/2||x - b||^2 is 1-strongly convex, for sfista/fdpg
+        self.normA = np.sqrt(2.0)  # spectral norm of D
 
     def f(self, x):
         r = x - self.b
@@ -54,3 +56,8 @@ class TotalVariationProblem(ProblemBase):
 
     def prox_g(self, z, alpha):
         return prox_l1(z, alpha * self.lam)
+		
+    # added for FDPG
+    def grad_conjugate(self, s):
+        # ∇f*(s) = s + b
+        return s + self.b

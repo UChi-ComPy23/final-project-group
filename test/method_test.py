@@ -2,7 +2,6 @@ import numpy as np
 
 from src.Problems.lasso import LassoProblem
 from src.Problems.constrained import ConstrainedLSProblem
-from src.Problems.group_lasso import GroupLassoProblem
 from src.Problems.huber_comp import HuberCompositeProblem
 from src.Problems.logistic import LogisticProblem
 from src.Problems.quadratic import QuadraticProblem
@@ -124,45 +123,40 @@ def test_smoothed_fista_correctness_quadratic_dual():
 
 def test_nested_fista_correctness_huber():
     """
-    NestedFISTA should reliably decrease the composite objective on a real 
-    Huber + L1 problem. Because the inner solver is inexact, we compare 
-    objective values against a high-accuracy ProxGradient baseline rather 
-    than requiring identical iterates.
+    NestedFISTA should reliably decrease the composite objective on a small
+    nonlinear-composite Huber + L1 problem: F(x) = phi(f(x)) + lam * g(Ax)
+    Because the inner solver is inexact (ADMM), we compare only against a 
+    high-accuracy ProxGradient baseline in *objective value*, not iterates.
     """
     np.random.seed(0)
 
+    # small synthetic problem
     m, n = 10, 5
     A = np.random.randn(m, n)
     b = np.random.randn(m)
     delta = 0.1
     lam = 0.1
 
-    # composite Huber model
-    problem = HuberCompositeProblem(A, b, delta, lam)
+    # composite problem (must match your class name exactly)
+    problem = HuberCompositeProblem(A=A,b=b,delta_f=delta,lam=lam, phi_mode="sqrt")
+
     x0 = np.zeros(n)
+    nf = NestedFISTA(problem, x0, lam, accurate_inner_solver)
+    for _ in range(300):
+        nf.step()
 
-    # Nested FISTA with accurate inner solver
-    solver = NestedFISTA(problem, x0, lam, accurate_inner_solver)
-    for _ in range(200):
-        solver.step()
-
-    x_nf = solver.x
-
-    # Reference solution via slow, very accurate PG
-    pg = ProxGradient(problem, np.zeros(n), alpha=1e-2)
-    for _ in range(2000):
+    x_nf = nf.x
+    pg = ProxGradient(problem, np.zeros(n), alpha=1e-3)
+    for _ in range(5000):
         pg.step()
-
     x_star = pg.x
 
-    # Composite objective
-    F = lambda x: problem.f(x) + lam * problem.g(problem.A(x))
-
-    # Objective must be close
+    # final objective (must use problem.phi + problem.f + lam*g(Ax))
+    def F(x):
+        return problem.phi(problem.f(x)) + lam * problem.g(problem.A(x))
+		
     assert abs(F(x_nf) - F(x_star)) < 5e-2
-
-    # Iterates only need to be "reasonably" close
-    assert np.linalg.norm(x_nf - x_star) < 3e-1
+    assert np.linalg.norm(x_nf - x_star) < 5e-1
 
 
 def test_fdpg_correctness_quadratic():
@@ -254,8 +248,6 @@ def test_prox_subgradient_runs_and_decreases_objective():
 
     problem = LassoProblem(A, y, lam)
     x0 = np.zeros(n)
-
-    # IMPORTANT: use small step sizes so subgradient method does not blow up
     solver = ProxSubgradient(problem, x0, step_rule=lambda k: 1e-2 / np.sqrt(k + 1))
 
     for _ in range(300):

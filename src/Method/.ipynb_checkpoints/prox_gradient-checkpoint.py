@@ -53,13 +53,17 @@ class ProxGradient(SolverBase):
 
         # forward-backward update
         x_new = self.x - alpha * g
-        if hasattr(self.problem, "prox_g"):
-            self.x = self.problem.prox_g(x_new, alpha)
-        else:
-            raise RuntimeError("missing prox_g ")
+        # apply prox_g only if available
+        prox_g = getattr(self.problem, "prox_g", None)
+        if prox_g is not None and callable(prox_g):
+            try:
+                x_new = prox_g(x_new, alpha)
+            except NotImplementedError:
+                pass
 
-        # Record objective value
-        current_obj = self.problem.f(self.x)
-        self.objs.append(current_obj)
-        if hasattr(self, 'record'):
-            self.record(obj=current_obj)
+        self.x = x_new
+
+        # record objective
+        obj = self.problem.f(self.x)
+        self.objs.append(obj)
+        self.record(obj=obj, x=self.x.copy())

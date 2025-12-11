@@ -25,24 +25,38 @@ Oracles:
 """
 
 class ADLPMM(SolverBase):
-    """ADLPMM method, requires problems to implement prox_f and A, AT.
-    """
-    def __init__(self, problem, x0, z0, u0, lam, rho=1, abstol=1e-4, reltol=1e-2):
-        """
-        problem: ProblemBase
-        x0, z0, u0: initial primal and dual variables
-        rho: penalty parameter
-        abstol: absolute tolerance for stopping 
-        reltol: relative tolerance for stopping
-        """
+    """ADLPMM method, requires problems to implement prox_f and A, AT."""
+    def __init__(self, problem, x0, z0=None, u0=None, lam=1, rho=1, abstol=1e-4, reltol=1e-2):
         super().__init__(problem, x0)
-        self.z = z0
-        self.u = u0
+
+        # compute Ax to determine dimension m
+        Ax0 = self.problem.A(self.x)
+        m = Ax0.shape[0]
+
+        # initialize / validate z0
+        if z0 is None:
+            z0 = Ax0.copy()
+        else:
+            z0 = np.asarray(z0)
+            if z0.shape[0] != m:
+                raise ValueError(f"ADLPMM init: z0 has shape {z0.shape}, but Ax has dimension {m}.")
+
+        # initialize / validate u0
+        if u0 is None:
+            u0 = np.zeros(m)
+        else:
+            u0 = np.asarray(u0)
+            if u0.shape[0] != m:
+                raise ValueError(f"ADLPMM init: u0 has shape {u0.shape}, but Ax has dimension {m}.")
+
+        # finalize
+        self.z = z0.copy()
+        self.u = u0.copy()
+        self.lam = lam
         self.rho = rho
         self.abstol = abstol
         self.reltol = reltol
-        self.lam = lam
-
+	
     def step(self):
         """
         1) x-update (linearized, via prox_f)
@@ -111,8 +125,7 @@ class ADLPMM(SolverBase):
             r_norm=r_norm,
             s_norm=s_norm,
             x=self.x.copy(),
-            z=self.z.copy(),
-        )
+            z=self.z.copy(),)
 
     def stop(self):
         """stopping condition for ADLPMM. stops when:
