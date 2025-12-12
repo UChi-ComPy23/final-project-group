@@ -1,6 +1,23 @@
 import numpy as np
 from src.Core.solver import SolverBase
-from src.util.linesearch import backtracking
+from src.util.linesearch import backtracking, backtracking_composite
+from src.Core.problems import ProblemBase
+
+"""
+Method: Proximal Gradient (Forward–Backward Splitting)
+Minimization model: minimize f(x) + g(x)
+
+Assumptions:
+- f is smooth with Lipschitz-continuous gradient
+- g is proper, closed, and proximable
+- prox_g must be available through the problem interface
+
+The method performs:
+1) Forward (gradient) step on f: x̃ = x - α ∇f(x)
+2) Backward (proximal) step on g: x⁺ = prox_{α g}(x̃)
+
+Step size α may be fixed or selected by backtracking line search.
+"""
 
 class ProxGradient(SolverBase):
     """Proximal gradient method"""
@@ -16,16 +33,17 @@ class ProxGradient(SolverBase):
         self.alpha = alpha
         self.btls = btls
         self.max_iter = max_iter
-        # Initialize objective history list - THIS IS CRITICAL
-        self.objs = []
+        self.objs = [] #initialize objective history list 
 
     def step(self):
+        """a step for prox_gradient method
+        """
         g = self.problem.grad(self.x)
         p = -g  #gradient descent direction
 
-        if self.alpha is None:# use btls find step size
+        if self.alpha is None: # use btls find step size
             f = self.problem.f 
-            alpha = backtracking(f, self.x, p, g)
+            alpha = backtracking_composite(f=self.problem.f, grad_f=self.problem.grad,g_fun=self.problem.g,prox_g=self.problem.prox_g,x=self.x)
         else:
             alpha = self.alpha
 
@@ -35,13 +53,17 @@ class ProxGradient(SolverBase):
 
         # forward-backward update
         x_new = self.x - alpha * g
-        if hasattr(self.problem, "prox_g"):
-            self.x = self.problem.prox_g(x_new, alpha)
-        else:
-                         Error("missing prox_g ")
+        # apply prox_g only if available
+        prox_g = getattr(self.problem, "prox_g", None)
+        if prox_g is not None and callable(prox_g):
+            try:
+                x_new = prox_g(x_new, alpha)
+            except NotImplementedError:
+                pass
 
-        # Record objective value - THIS IS CRITICAL
-        current_obj = self.problem.f(self.x)
-        self.objs.append(current_obj)
-        if hasattr(self, 'record'):
-            self.record(obj=current_obj)
+        self.x = x_new
+
+        # record objective
+        obj = self.problem.f(self.x)
+        self.objs.append(obj)
+        self.record(obj=obj, x=self.x.copy())

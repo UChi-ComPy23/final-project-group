@@ -15,7 +15,7 @@ All the involved functions are convex.
 """
 
 class ProblemBase:
-	"""Base class for defining optimization problems.
+    """Base class for defining optimization problems.
     """
 
     def f(self, x):
@@ -49,14 +49,21 @@ class ProblemBase:
         """
         raise NotImplementedError
 
-    def A(self, x):
+    def prox_g(self, x, alpha):
         """
-        Return the linear transformation A(x)
+        Proximal operator of g
         """
         raise NotImplementedError
 
+    def A(self, x):
+        """
+        not all problems need this. optional attributes, default set to identity.
+        """
+        return x
+
     def AT(self, y):
         """
-        Return the adjoint linear transformation A^T(y)
+        not all problems need this. optional attributes, default set to identity.
         """
-        raise NotImplementedError
+        return y
+
